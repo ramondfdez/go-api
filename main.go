@@ -5,6 +5,7 @@ import (
     "fmt"
     "log"
     "net/http"
+    "os"
 
     "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -47,13 +48,17 @@ func main() {
     router.GET("/api/healthchecker", handler.HealthCheckerHandler)
 
     // Start the server
-    fmt.Println("🚀 Server started successfully on port 8000")
-    log.Fatal(http.ListenAndServe(":8000", router))
+    port := getEnv("PORT", "8000")
+    fmt.Printf("🚀 Server started successfully on port %s\n", port)
+    log.Fatal(http.ListenAndServe(":"+port, router))
 }
 
 // Initialize MongoDB connection
 func initDB() (*mongo.Database, error) {
-    clientOptions := options.Client().ApplyURI("mongodb://mongodb:27017")
+    mongoURI := getEnv("MONGO_URI", "mongodb://mongodb:27017")
+    dbName := getEnv("MONGO_DB", "todo_db")
+
+    clientOptions := options.Client().ApplyURI(mongoURI)
     client, err := mongo.Connect(context.TODO(), clientOptions)
     if err != nil {
         return nil, err
@@ -65,5 +70,13 @@ func initDB() (*mongo.Database, error) {
     }
 
     fmt.Println("Connected to MongoDB!")
-    return client.Database("todo_db"), nil
+    return client.Database(dbName), nil
+}
+
+// getEnv reads an environment variable or falls back to a default value
+func getEnv(key, fallback string) string {
+    if value, ok := os.LookupEnv(key); ok && value != "" {
+        return value
+    }
+    return fallback
 }
